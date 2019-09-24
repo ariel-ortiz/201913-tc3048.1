@@ -53,12 +53,77 @@ public class Scanner {
     }
 }
 
+public class SyntaxError: Exception { }
+
+public class Parser {
+    IEnumerator<Token> tokenStream;
+
+    public Parser(IEnumerator<Token> tokenStream) {
+        this.tokenStream = tokenStream;
+        this.tokenStream.MoveNext();
+    }
+
+    public TokenCategory Current {
+        get { return tokenStream.Current.Category; }
+    }
+
+    public Token Expect(TokenCategory category) {
+        if (Current == category) {
+            Token current = tokenStream.Current;
+            tokenStream.MoveNext();
+            return current;
+        } else {
+            throw new SyntaxError();
+        }
+    }
+
+    public void Prog() {
+        Exp();
+        Expect(TokenCategory.EOF);
+    }
+
+    public void Exp() {
+        Term();
+        while (Current == TokenCategory.PLUS) {
+            Expect(TokenCategory.PLUS);
+            Term();
+        }
+    }
+
+    public void Term() {
+        Fact();
+        while (Current == TokenCategory.TIMES) {
+            Expect(TokenCategory.TIMES);
+            Fact();
+        }
+    }
+
+    public void Fact() {
+        switch (Current) {
+        case TokenCategory.INT:
+            Expect(TokenCategory.INT);
+            break;
+        case TokenCategory.OPEN_PAR:
+            Expect(TokenCategory.OPEN_PAR);
+            Exp();
+            Expect(TokenCategory.CLOSE_PAR);
+            break;
+        default:
+            throw new SyntaxError();
+        }
+    }
+}
+
 public class Driver {
     public static void Main() {
         Console.Write("> ");
         var line = Console.ReadLine();
-        foreach (var token in new Scanner(line).Start()) {
-            Console.WriteLine(token);
+        var parser = new Parser(new Scanner(line).Start().GetEnumerator());
+        try {
+            parser.Prog();
+            Console.WriteLine("Syntax OK!");
+        } catch (SyntaxError) {
+            Console.WriteLine("Bad syntax!");
         }
     }
 }
