@@ -1,6 +1,16 @@
 /*
  * Lexical analysis (scanner) for the Simple Expression Language.
  * 2019-09-02
+ * 
+ * Syntactic analysis (parser)
+ * 2019-09-23
+ * 
+ *  LL(1) Grammar:
+ * 
+ *      Prog  ::= Exp "EOF"
+ *      Exp   ::= Term ("+" Term)*
+ *      Term  ::= Fact ("*" Fact)*
+ *      Fact  ::= "int" | "(" Exp ")"
  */
 using System;
 using System.Collections.Generic;
