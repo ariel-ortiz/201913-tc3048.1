@@ -9,7 +9,8 @@
  * 
  *      Prog  ::= Exp "EOF"
  *      Exp   ::= Term ("+" Term)*
- *      Term  ::= Fact ("*" Fact)*
+ *      Term  ::= Pow ("*" Pow)*
+ *      Pow   ::= Fact ("**" Pow)?
  *      Fact  ::= "int" | "(" Exp ")"
  */
 using System;
@@ -103,10 +104,20 @@ public class Parser {
     }
 
     public int Term() {
-        var result = Fact();
+        var result = Pow();
         while (Current == TokenCategory.TIMES) {
             Expect(TokenCategory.TIMES);
-            result *= Fact();
+            result *= Pow();
+        }
+        return result;
+    }
+
+    public int Pow() {
+        var result = Fact();
+        if (Current == TokenCategory.POW) {
+            Expect(TokenCategory.POW);
+            var exp = Pow();
+            result = (int) Math.Pow(result, exp);
         }
         return result;
     }
