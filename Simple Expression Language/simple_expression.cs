@@ -12,6 +12,9 @@
  *      Term  ::= Pow ("*" Pow)*
  *      Pow   ::= Fact ("**" Pow)?
  *      Fact  ::= "int" | "(" Exp ")"
+ * 
+ * AST construction
+ * 2019-10-07
  */
 using System;
 using System.Collections.Generic;
@@ -89,45 +92,60 @@ public class Parser {
         }
     }
 
-    public int Prog() {
-        var result = Exp();
+    public Node Prog() {
+        var result = new Prog() {
+            Exp()  // Add method called implicitly.
+        };
         Expect(TokenCategory.EOF);
         return result;
     }
 
-    public int Exp() {
+    public Node Exp() {
         var result = Term();
         while (Current == TokenCategory.PLUS) {
-            Expect(TokenCategory.PLUS);
-            result += Term();
+            var node = new Plus() {
+                AnchorToken = Expect(TokenCategory.PLUS)
+            };
+            node.Add(result);
+            node.Add(Term());
+            result = node;
         }
         return result;
     }
 
-    public int Term() {
+    public Node Term() {
         var result = Pow();
         while (Current == TokenCategory.TIMES) {
-            Expect(TokenCategory.TIMES);
-            result *= Pow();
+            var node = new Times() {
+                AnchorToken = Expect(TokenCategory.TIMES)
+            };
+            node.Add(result);
+            node.Add(Pow());
+            result = node;
         }
         return result;
     }
 
-    public int Pow() {
+    public Node Pow() {
         var result = Fact();
         if (Current == TokenCategory.POW) {
-            Expect(TokenCategory.POW);
-            var exp = Pow();
-            result = (int) Math.Pow(result, exp);
+            var node = new Pow() {
+                AnchorToken = Expect(TokenCategory.POW)
+            };
+            node.Add(result);
+            node.Add(Pow());
+            result = node;
         }
         return result;
     }
 
-    public int Fact() {
+    public Node Fact() {
         switch (Current) {
         case TokenCategory.INT:
             var token = Expect(TokenCategory.INT);
-            return Int32.Parse(token.Lexeme);
+            return new Int() {
+                AnchorToken = token
+            };
 
         case TokenCategory.OPEN_PAR:
             Expect(TokenCategory.OPEN_PAR);
@@ -141,7 +159,7 @@ public class Parser {
     }
 }
 
-class Node: IEnumerable<Node> {
+public class Node: IEnumerable<Node> {
 
     IList<Node> children = new List<Node>();
 
@@ -186,6 +204,12 @@ class Node: IEnumerable<Node> {
     }
 }
 
+public class Prog:  Node { }
+public class Plus:  Node { }
+public class Times: Node { }
+public class Pow:   Node { }
+public class Int:   Node { }
+
 public class Driver {
     public static void Main() {
         Console.Write("> ");
@@ -193,7 +217,7 @@ public class Driver {
         var parser = new Parser(new Scanner(line).Start().GetEnumerator());
         try {
             var result = parser.Prog();
-            Console.WriteLine(result);
+            Console.WriteLine(result.ToStringTree());
 
         } catch (SyntaxError) {
             Console.WriteLine("Bad syntax!");
