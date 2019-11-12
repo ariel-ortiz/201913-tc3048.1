@@ -18,6 +18,9 @@
  * 
  * AST traversal using the (modified) Visitor pattern
  * 2019-10-14
+ * 
+ * CIL Code Generation
+ * 2019-11-11
  */
 using System;
 using System.Collections.Generic;
@@ -301,6 +304,46 @@ int main(void) {
     }
 }
 
+public class CILVisitor {
+
+    public String Visit(Prog node) {
+        return ".assembly 'example' { }\n\n"
+            + ".class public 'SimpleExpression' extends ['mscorlib']'System'.'Object' {\n"
+            + "\t.method public static void 'start'() {\n"
+            + "\t\t.entrypoint\n"
+            + Visit((dynamic) node[0])
+            + "\t\tcall void class ['mscorlib']'System'.'Console'::'WriteLine'(int32)\n"
+            + "\t\tret\n"
+            + "\t}\n"
+            + "}\n";
+    }
+
+    public String Visit(Plus node) {
+        return Visit((dynamic) node[0])
+            + Visit((dynamic) node[1])
+            + "\t\tadd.ovf\n";
+    }
+
+    public String Visit(Times node) {
+        return Visit((dynamic) node[0])
+            + Visit((dynamic) node[1])
+            + "\t\tmul.ovf\n";
+    }
+
+    public String Visit(Pow node) {
+        return Visit((dynamic) node[0])
+            + "\t\tconv.r8\n"
+            + Visit((dynamic) node[1])
+            + "\t\tconv.r8\n"
+            + "\t\tcall float64 class ['mscorlib']'System'.'Math'::'Pow'(float64, float64)\n"
+            + "\t\tconv.i4\n";
+    }
+
+    public String Visit(Int node) {
+        return "\t\tldc.i4 " + node.AnchorToken.Lexeme + '\n';
+    }
+}
+
 public class Driver {
     public static void Main() {
         Console.Write("> ");
@@ -309,6 +352,7 @@ public class Driver {
         try {
             var ast = parser.Prog();
 
+            /*
             Console.WriteLine("Result of evaluation:\n");
             Console.WriteLine(new EvalVisitor().Visit((dynamic) ast));
             Console.WriteLine();
@@ -319,6 +363,8 @@ public class Driver {
 
             Console.WriteLine("Translation to C:\n");
             Console.WriteLine(new CVisitor().Visit((dynamic) ast));
+            */
+            Console.WriteLine(new CILVisitor().Visit((dynamic) ast));
 
         } catch (SyntaxError) {
             Console.WriteLine("Bad syntax!");
